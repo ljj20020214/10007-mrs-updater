@@ -8,6 +8,6 @@
 type: http
 behavior: domain
 format: mrs
-url: https://cdn.jsdelivr.net/gh/你的用户名/你的仓库@main/dist/10007-Ads.mrs
+url: https://cdn.jsdelivr.net/gh/ljj20020214/10007-mrs-updater@main/dist/10007-Ads.mrs
 interval: 43200
 ```
