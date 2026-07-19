@@ -1,0 +1,43 @@
+name: Update 10007 MRS
+
+on:
+  schedule:
+    - cron: "17 */12 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Test parser
+        run: python -m unittest -v test_build.py
+      - name: Download upstream and build domain list
+        run: |
+          curl -fL --retry 3 -o 10007.hosts https://raw.githubusercontent.com/lingeringsound/10007_auto/master/all
+          python build.py 10007.hosts dist/10007.txt --min-count 10000
+      - name: Download pinned Mihomo converter
+        run: |
+          curl -fL --retry 3 -o mihomo.gz https://github.com/MetaCubeX/mihomo/releases/download/v1.19.28/mihomo-linux-amd64-v1.19.28.gz
+          echo "d5967e079d9f793515a5a8193aabda455f7e012427eccd567dbc4f2f15498204  mihomo.gz" | sha256sum -c -
+          gzip -d mihomo.gz
+          chmod +x mihomo
+      - name: Convert and verify MRS
+        run: |
+          ./mihomo convert-ruleset domain text dist/10007.txt dist/10007-Ads.mrs
+          ./mihomo convert-ruleset domain mrs dist/10007-Ads.mrs dist/10007-roundtrip.txt
+          python -c "from pathlib import Path; a=set(Path('dist/10007.txt').read_text().splitlines()); b=set(Path('dist/10007-roundtrip.txt').read_text().splitlines()); assert a == b, (len(a-b), len(b-a))"
+      - name: Publish only changed output
+        run: |
+          rm -f dist/10007.txt dist/10007-roundtrip.txt
+          git add dist/10007-Ads.mrs
+          git diff --cached --quiet && exit 0
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -m "chore: update 10007 MRS"
+          git push
